@@ -57,7 +57,7 @@ const RTIDetailsPage = () => {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    const applicationId = Number(id)
+    const applicationId = id
     if (!applicationId) {
       setError("Invalid RTI ID.")
       setIsLoading(false)

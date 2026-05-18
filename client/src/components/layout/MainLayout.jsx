@@ -142,7 +142,7 @@ const MainLayout = () => {
                 type="text"
                 value={searchText}
                 onChange={handleSearchChange}
-                placeholder="Search"
+                placeholder="Search by applicant or RTI No"
                 className="w-[300px] h-[42px] border border-gray-300 rounded-lg pl-4 pr-10 text-sm outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
               />
               <Search

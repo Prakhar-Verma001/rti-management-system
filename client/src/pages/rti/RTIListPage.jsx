@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import NoDataFound from "../../components/common/NoDataFound";
+import ConfirmModal from "../../components/common/ConfirmModal";
 import {
   deleteRTIApplication,
   getRTIApplications,
@@ -142,6 +143,49 @@ const RTIListPage = () => {
     }
   };
 
+  // Confirmation modal state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedDeleteId, setSelectedDeleteId] = useState(null);
+  const [confirmProcessing, setConfirmProcessing] = useState(false);
+
+  const openConfirm = (id) => {
+    setSelectedDeleteId(id);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedDeleteId) return;
+    setConfirmProcessing(true);
+    setError("");
+
+    try {
+      await deleteRTIApplication(selectedDeleteId);
+      const { data, total } = await getRTIApplications({
+        page: currentPage,
+        pageSize,
+        search: searchQuery,
+        startDate,
+        endDate,
+        status: statusFilter,
+        department: departmentFilter,
+      });
+
+      setApplications(data);
+      setTotalRecords(total);
+      setConfirmOpen(false);
+      setSelectedDeleteId(null);
+    } catch (err) {
+      setError("Unable to delete the application. Please try again.");
+    } finally {
+      setConfirmProcessing(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmOpen(false);
+    setSelectedDeleteId(null);
+  };
+
   const hasData = applications.length > 0;
 
   const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
@@ -215,6 +259,14 @@ const RTIListPage = () => {
                   className="h-11 border border-gray-300 rounded-lg px-3 text-sm outline-none focus:ring-2 focus:ring-blue-400"
                 />
               </div>
+                <ConfirmModal
+                  isOpen={confirmOpen}
+                  title="Confirm delete"
+                  message="Are you sure you want to delete this RTI record? This action cannot be undone."
+                  onConfirm={handleConfirmDelete}
+                  onCancel={handleCancelDelete}
+                  isProcessing={confirmProcessing}
+                />
             </div>
           </div>
         </div>
@@ -305,7 +357,7 @@ const RTIListPage = () => {
                           {/* DELETE */}
                           <button
                             type="button"
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => openConfirm(item.id)}
                             className="w-9 h-9 rounded-lg bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100 transition-all duration-200"
                           >
                             <Trash2 size={17} />
@@ -382,5 +434,4 @@ const RTIListPage = () => {
     </div>
   );
 };
-
 export default RTIListPage;

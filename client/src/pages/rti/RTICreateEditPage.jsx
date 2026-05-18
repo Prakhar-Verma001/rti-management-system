@@ -85,7 +85,7 @@ const RTICreateEditPage = ({
     setIsLoadingData(true);
     setError("");
 
-    getRTIApplicationById(Number(id))
+    getRTIApplicationById(id)
       .then((data) => {
         if (data) {
           reset(mapApplicationToFormValues(data));
@@ -107,7 +107,7 @@ const RTICreateEditPage = ({
 
     try {
       if (isEditMode && id) {
-        await updateRTIApplication(Number(id), formData);
+        await updateRTIApplication(id, formData);
         // TODO: call update RTI API endpoint here
       } else {
         await createRTIApplication(formData);
@@ -116,7 +116,7 @@ const RTICreateEditPage = ({
 
       navigate("/rti");
     } catch (err) {
-      setError("Unable to save the RTI record. Please try again.");
+      setError(err?.message || "Unable to save the RTI record. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -555,7 +555,17 @@ const RTICreateEditPage = ({
                 disabled={isSubmitting}
                 className="px-6 py-2.5 rounded-lg bg-[#0B1F4D] text-white font-medium hover:bg-[#081735] transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isEditMode ? "Update RTI" : "Submit"}
+                {isSubmitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                    {isEditMode ? "Updating..." : "Submitting..."}
+                  </span>
+                ) : (
+                  (isEditMode ? "Update RTI" : "Submit")
+                )}
               </button>
             </div>
           </form>
