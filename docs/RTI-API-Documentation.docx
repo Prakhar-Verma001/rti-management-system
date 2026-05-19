@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:r><w:t>RTI Management API Documentation</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Generated: 2026-05-19</w:t></w:r></w:p>
+
+    <w:p><w:r><w:t>Base URL:</w:t></w:r></w:p>
+    <w:p><w:r><w:t>{{base_url}} (default: http://localhost:4000)</w:t></w:r></w:p>
+
+    <w:p><w:r><w:t>Overview:</w:t></w:r></w:p>
+    <w:p><w:r><w:t>This document describes the RTI Management backend API endpoints exposed under /api/rti. Use the Postman collection (docs/RTI-API-Postman-Collection.json) for runnable examples.</w:t></w:r></w:p>
+
+    <w:p><w:r><w:t>Endpoints:</w:t></w:r></w:p>
+
+    <w:p><w:r><w:t>1) GET /api/rti</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Purpose: List RTI applications with pagination and optional filters.</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Query parameters:</w:t></w:r></w:p>
+    <w:p><w:r><w:t>    page (number, optional) — page number (default 1)</w:t></w:r></w:p>
+    <w:p><w:r><w:t>    pageSize (number, optional) — items per page (default 10)</w:t></w:r></w:p>
+    <w:p><w:r><w:t>    search (string, optional) — search by applicant name or RTI number</w:t></w:r></w:p>
+    <w:p><w:r><w:t>    startDate, endDate (ISO date string) — dateOfReceipt range</w:t></w:r></w:p>
+    <w:p><w:r><w:t>    status (string) — status filter (e.g., Pending, Draft)</w:t></w:r></w:p>
+    <w:p><w:r><w:t>    department (string) — department name</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Response: { data: [...], total, page, pageSize }</w:t></w:r></w:p>
+
+    <w:p><w:r><w:t>2) GET /api/rti/{id}</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Purpose: Retrieve a single RTI application by its MongoDB ObjectId.</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Path parameter: id (ObjectId)</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Response: flattened RTI application object (applicant, department (populated), rtiDetail fields, createdAt, updatedAt)</w:t></w:r></w:p>
+
+    <w:p><w:r><w:t>3) POST /api/rti</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Purpose: Create a new RTI application (submit or save draft).</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Body (application/json):</w:t></w:r></w:p>
+    <w:p><w:r><w:t>  { applicantName, gender, contactNumber, email, address, subject, applicationMode, dateOfReceipt, description, department, assignedOfficer, dueDate, extendedDueDate, reminderFrequency, status, uploadApplication, additionalAttachments, rtiNo }</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Notes: When status === "Draft", many validators are skipped and partial payloads are accepted. When creating and department provided, a DepartmentDetail record is created or reused.</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Response: 201 Created with the created object (flattened).</w:t></w:r></w:p>
+
+    <w:p><w:r><w:t>4) PUT /api/rti/{id}</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Purpose: Update an existing RTI application.</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Path parameter: id (ObjectId)</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Body: same shape as POST. When department provided, the DepartmentDetail is found or created; otherwise existing department is preserved.</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Response: 200 OK with updated object (flattened).</w:t></w:r></w:p>
+
+    <w:p><w:r><w:t>5) DELETE /api/rti/{id}</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Purpose: Delete an RTI application along with its associated RtiDetail record.</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Path parameter: id (ObjectId)</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Response: 204 No Content on success.</w:t></w:r></w:p>
+
+    <w:p><w:r><w:t>Validation and errors:</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - The API uses express-validator for request validation. For non-draft submissions the API returns 400 with payload: { message: "Validation failed", errors: [{ field, message }, ...] }.</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - Mongoose validation errors are returned by the global error handler with a similar shape for client mapping.</w:t></w:r></w:p>
+
+    <w:p><w:r><w:t>Notes and samples:</w:t></w:r></w:p>
+    <w:p><w:r><w:t> - See the attached Postman collection at docs/RTI-API-Postman-Collection.json for runnable examples, request bodies, and environment variables.</w:t></w:r></w:p>
+
+    <w:p><w:r><w:t>Contact: project README for running the server (server/README or server/index.js).</w:t></w:r></w:p>
+
+    <w:p><w:r><w:t>End of document.</w:t></w:r></w:p>
+  </w:body>
+</w:document>
