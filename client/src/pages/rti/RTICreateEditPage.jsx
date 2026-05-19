@@ -39,19 +39,31 @@ const defaultFormValues = {
   reminderFrequency: "",
 };
 
-const mapApplicationToFormValues = (application) => ({
-  ...defaultFormValues,
-  ...application,
-  applicantName: application.applicant || application.applicantName || "",
-  dateOfReceipt: application.date || application.dateOfReceipt || "",
-  rtiNo: application.rtiNo || "",
-  department: application.department || "",
-  description: application.description || "",
-  applicationMode: application.applicationMode || "",
-  dueDate: application.dueDate || "",
-  extendedDueDate: application.extendedDueDate || "",
-  reminderFrequency: application.reminderFrequency || "",
-});
+const formatDateForInput = (value) => {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+};
+
+const mapApplicationToFormValues = (application) => {
+  const dept = application.department;
+  const departmentName = dept && typeof dept === "object" ? (dept.departmentName || dept.name || "") : (dept || "");
+  return {
+    ...defaultFormValues,
+    ...application,
+    applicantName: application.applicant || application.applicantName || "",
+    dateOfReceipt: formatDateForInput(application.dateOfReceipt || application.date || application.dateOfReceipt),
+    rtiNo: application.rtiNo || "",
+    department: departmentName,
+    description: application.description || "",
+    applicationMode: application.applicationMode || "",
+    dueDate: formatDateForInput(application.dueDate),
+    extendedDueDate: formatDateForInput(application.extendedDueDate),
+    reminderFrequency: application.reminderFrequency || "",
+    assignedOfficer: application.assignedOfficer || (dept && dept.assignedOfficer) || "",
+  };
+};
 
 const RTICreateEditPage = ({
   isEditMode = false,
@@ -60,13 +72,18 @@ const RTICreateEditPage = ({
   const { id } = useParams();
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const [serverError, setServerError] = useState("");
+  const [savingAction, setSavingAction] = useState(null); // 'draft' | 'submit' | null
+  const [fieldToasts, setFieldToasts] = useState([]); // {id, field, message}
 
   const {
     register,
     handleSubmit,
     reset,
     watch,
+    getValues,
+    clearErrors,
+    setError,
     formState: { errors },
   } = useForm({
     defaultValues: defaultFormValues,
@@ -83,18 +100,18 @@ const RTICreateEditPage = ({
     if (!id) return;
 
     setIsLoadingData(true);
-    setError("");
+    setServerError("");
 
     getRTIApplicationById(id)
       .then((data) => {
         if (data) {
           reset(mapApplicationToFormValues(data));
         } else {
-          setError("RTI record not found.");
+          setServerError("RTI record not found.");
         }
       })
       .catch(() => {
-        setError("Unable to load RTI data. Please try again.");
+        setServerError("Unable to load RTI data. Please try again.");
       })
       .finally(() => {
         setIsLoadingData(false);
@@ -102,24 +119,89 @@ const RTICreateEditPage = ({
   }, [id, isEditMode, reset]);
 
   const onSubmit = async (formData) => {
+    setSavingAction("submit");
     setIsSubmitting(true);
-    setError("");
+    setServerError("");
 
     try {
+      const payload = { ...formData };
+      // Ensure new submissions are marked as 'Pending' (matches backend enum)
+      if (!isEditMode && !payload.status) payload.status = "Pending";
+
       if (isEditMode && id) {
-        await updateRTIApplication(id, formData);
-        // TODO: call update RTI API endpoint here
+        await updateRTIApplication(id, payload);
       } else {
-        await createRTIApplication(formData);
-        // TODO: call create RTI API endpoint here
+        await createRTIApplication(payload);
       }
 
       navigate("/rti");
     } catch (err) {
-      setError(err?.message || "Unable to save the RTI record. Please try again.");
+      // If server returned field-level validation errors, apply them to the form
+      const server = err?.server;
+      if (server && Array.isArray(server.errors)) {
+        server.errors.forEach((e) => {
+          const field = e.field || e.param || e.path || "";
+          if (field) setError(field, { type: "server", message: e.message });
+          if (field) showFieldToast(field, e.message);
+        });
+        setServerError(server.message || "Validation failed on server");
+      } else {
+        setServerError(err?.message || "Unable to save the RTI record. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
+      setSavingAction(null);
     }
+  };
+
+  const handleSaveDraft = async () => {
+    // Bypass form validation for Save Draft: clear any existing validation errors
+    clearErrors();
+    setSavingAction("draft");
+    setIsSubmitting(true);
+    setServerError("");
+
+    try {
+      const currentValues = getValues();
+      const payload = { ...currentValues, status: "Draft" };
+
+      if (isEditMode && id) {
+        await updateRTIApplication(id, payload);
+      } else {
+        await createRTIApplication(payload);
+      }
+
+      // close form and return to list so table can refresh
+      navigate("/rti");
+    } catch (err) {
+      const server = err?.server;
+      if (server && Array.isArray(server.errors)) {
+        server.errors.forEach((e) => {
+          const field = e.field || e.param || e.path || "";
+          if (field) setError(field, { type: "server", message: e.message });
+          if (field) showFieldToast(field, e.message);
+        });
+        setServerError(server.message || "Validation failed on server");
+      } else {
+        setServerError(err?.message || "Unable to save draft. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+      setSavingAction(null);
+    }
+  };
+
+  const showFieldToast = (field, message) => {
+    const id = `${field}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    setFieldToasts((prev) => [...prev, { id, field, message }]);
+    // auto-dismiss
+    setTimeout(() => {
+      setFieldToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  };
+
+  const removeFieldToast = (id) => {
+    setFieldToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
   const handleBack = () => {
@@ -149,9 +231,33 @@ const RTICreateEditPage = ({
         </div>
       ) : (
         <>
-          {error && (
+          {serverError && (
             <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {error}
+              {serverError}
+            </div>
+          )}
+
+          {/* Field-level toasts (top-right) */}
+          {fieldToasts.length > 0 && (
+            <div className="fixed top-6 right-6 z-50 flex flex-col gap-3">
+              {fieldToasts.map((t) => (
+                <div
+                  key={t.id}
+                  className="max-w-xs bg-red-600 text-white text-sm px-3 py-2 rounded shadow flex items-start justify-between gap-3"
+                >
+                  <div>
+                    <div className="font-semibold">{t.field}</div>
+                    <div className="text-xs">{t.message}</div>
+                  </div>
+                  <button
+                    onClick={() => removeFieldToast(t.id)}
+                    className="text-white opacity-80 hover:opacity-100 ml-2"
+                    aria-label={`dismiss-${t.field}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
             </div>
           )}
 
@@ -182,9 +288,11 @@ const RTICreateEditPage = ({
                 </div>
 
                 <div>
-                  <label className={labelClassName}>Gender</label>
+                  <label className={labelClassName}>Gender <span className="text-red-500">*</span></label>
 
-                  <select className={inputClassName} {...register("gender")}>
+                  <select className={inputClassName} {...register("gender",{
+                    required: "Gender is required",
+                  })}>
                     <option value="">Select</option>
                     <option>Male</option>
                     <option>Female</option>
@@ -544,9 +652,21 @@ const RTICreateEditPage = ({
               <div className="flex flex-col gap-2">
                 <button
                   type="button"
-                  className="px-5 py-2.5 rounded-lg bg-blue-50 text-blue-900 font-medium hover:bg-blue-100 transition-all duration-200"
+                  onClick={handleSaveDraft}
+                  disabled={isSubmitting}
+                  className="px-5 py-2.5 rounded-lg bg-blue-50 text-blue-900 font-medium hover:bg-blue-100 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Save Draft
+                  {isSubmitting && savingAction === "draft" ? (
+                    <span className="inline-flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      </svg>
+                      Saving...
+                    </span>
+                  ) : (
+                    "Save Draft"
+                  )}
                 </button>
               </div>
 
@@ -555,7 +675,7 @@ const RTICreateEditPage = ({
                 disabled={isSubmitting}
                 className="px-6 py-2.5 rounded-lg bg-[#0B1F4D] text-white font-medium hover:bg-[#081735] transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSubmitting ? (
+                {isSubmitting && savingAction === "submit" ? (
                   <span className="inline-flex items-center gap-2">
                     <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />

@@ -22,8 +22,18 @@ const buildPayload = (body) => ({
   applicationMode: body.applicationMode?.trim() || "",
   dateOfReceipt: body.dateOfReceipt ? new Date(body.dateOfReceipt) : null,
   description: body.description?.trim() || "",
-  departmentName: body.department?.trim() || "",
-  assignedOfficer: body.assignedOfficer?.trim() || "",
+  departmentName: (() => {
+    if (!body.department && body.department !== "") return "";
+    if (typeof body.department === "string") return body.department.trim();
+    if (typeof body.department === "object") return (body.department.departmentName || body.department.name || "").trim();
+    return "";
+  })(),
+  assignedOfficer: (() => {
+    if (!body.assignedOfficer && body.assignedOfficer !== "") return "";
+    if (typeof body.assignedOfficer === "string") return body.assignedOfficer.trim();
+    if (typeof body.assignedOfficer === "object") return (body.assignedOfficer.assignedOfficer || body.assignedOfficer.name || "").trim();
+    return "";
+  })(),
   dueDate: body.dueDate ? new Date(body.dueDate) : null,
   extendedDueDate: body.extendedDueDate ? new Date(body.extendedDueDate) : null,
   reminderFrequency: body.reminderFrequency?.trim() || "",
@@ -51,20 +61,44 @@ const transformApplicant = (applicant) => {
   // Convert mongoose document to plain object if needed
   const object = typeof applicant.toObject === "function" ? applicant.toObject({ virtuals: true }) : applicant;
 
-  // If nested fields are mongoose documents (have toObject), convert them; otherwise leave as plain objects
-  if (
-    object.rtiDetail &&
-    object.rtiDetail.department &&
-    typeof object.rtiDetail.department.toObject === "function"
-  ) {
-    object.rtiDetail.department = object.rtiDetail.department.toObject({ virtuals: true });
+  // Normalize nested documents to plain objects
+  if (object.rtiDetail && typeof object.rtiDetail.toObject === "function") {
+    object.rtiDetail = object.rtiDetail.toObject({ virtuals: true });
   }
 
   if (object.department && typeof object.department.toObject === "function") {
     object.department = object.department.toObject({ virtuals: true });
   }
 
-  return object;
+  // Build a flattened payload expected by the frontend detail page
+  const result = {
+    id: object._id,
+    applicant: object.applicantName || "",
+    applicantName: object.applicantName || "",
+    gender: object.gender || "",
+    contactNumber: object.contactNumber || "",
+    email: object.email || "",
+    address: object.address || "",
+    // Keep department as object (populated) for richer UI
+    department: object.department || null,
+    assignedOfficer: object.department?.assignedOfficer || object.assignedOfficer || "",
+    // RTI detail fields
+    rtiNo: object.rtiDetail?.rtiNo || "",
+    subject: object.rtiDetail?.subject || "",
+    applicationMode: object.rtiDetail?.applicationMode || "",
+    dateOfReceipt: object.rtiDetail?.dateOfReceipt || null,
+    description: object.rtiDetail?.description || "",
+    dueDate: object.rtiDetail?.dueDate || null,
+    extendedDueDate: object.rtiDetail?.extendedDueDate || null,
+    reminderFrequency: object.rtiDetail?.reminderFrequency || "",
+    status: object.rtiDetail?.status || "",
+    uploadApplication: object.rtiDetail?.uploadApplication || "",
+    additionalAttachments: object.rtiDetail?.additionalAttachments || [],
+    createdAt: object.createdAt,
+    updatedAt: object.updatedAt,
+  };
+
+  return result;
 };
 
 export const getRTIApplications = async (req, res, next) => {
@@ -173,7 +207,8 @@ export const getRTIApplicationById = async (req, res, next) => {
 export const createRTIApplication = async (req, res, next) => {
   try {
     const payload = buildPayload(req.body);
-    const department = await findOrCreateDepartment(payload);
+    // Only create/find department when departmentName provided (skip for drafts)
+    const department = payload.departmentName ? await findOrCreateDepartment(payload) : null;
 
     const count = await RtiDetail.countDocuments();
     const rtiNo = payload.rtiNo || `RTI-${new Date().getFullYear()}-${String(count + 1).padStart(3, "0")}`;
@@ -190,7 +225,7 @@ export const createRTIApplication = async (req, res, next) => {
       status: payload.status,
       uploadApplication: payload.uploadApplication,
       additionalAttachments: payload.additionalAttachments,
-      department: department._id,
+      department: department?._id,
     });
 
     const applicant = await Applicant.create({
@@ -199,7 +234,7 @@ export const createRTIApplication = async (req, res, next) => {
       contactNumber: payload.contactNumber,
       email: payload.email,
       address: payload.address,
-      department: department._id,
+      department: department?._id,
       rtiDetail: rtiDetail._id,
     });
 
@@ -221,13 +256,15 @@ export const updateRTIApplication = async (req, res, next) => {
       return res.status(404).json({ message: "RTI record not found" });
     }
 
-    const department = await findOrCreateDepartment(payload);
+    // Only find/create department when departmentName provided (skip for drafts/partial updates)
+    const department = payload.departmentName ? await findOrCreateDepartment(payload) : null;
+
     applicant.applicantName = payload.applicantName;
     applicant.gender = payload.gender;
     applicant.contactNumber = payload.contactNumber;
     applicant.email = payload.email;
     applicant.address = payload.address;
-    applicant.department = department._id;
+    if (department) applicant.department = department._id; // preserve existing if not provided
 
     await applicant.save();
 
@@ -247,7 +284,7 @@ export const updateRTIApplication = async (req, res, next) => {
     rtiDetail.status = payload.status;
     rtiDetail.uploadApplication = payload.uploadApplication;
     rtiDetail.additionalAttachments = payload.additionalAttachments;
-    rtiDetail.department = department._id;
+    if (department) rtiDetail.department = department._id;
 
     await rtiDetail.save();
 

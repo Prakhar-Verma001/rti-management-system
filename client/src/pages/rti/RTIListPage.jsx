@@ -10,6 +10,17 @@ import {
   Plus,
 } from "lucide-react";
 
+const formatDate = (val) => {
+  if (!val) return "-";
+  try {
+    const d = new Date(val);
+    if (Number.isNaN(d.getTime())) return "-";
+    return d.toLocaleDateString();
+  } catch (e) {
+    return "-";
+  }
+};
+
 import NoDataFound from "../../components/common/NoDataFound";
 import ConfirmModal from "../../components/common/ConfirmModal";
 import {
@@ -65,6 +76,7 @@ const RTIListPage = () => {
   const [departmentFilter, setDepartmentFilter] = useState("All Departments");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState(null); // { message, type: 'success'|'error' }
 
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
   const firstItemIndex = totalRecords === 0 ? 0 : (currentPage - 1) * pageSize + 1;
@@ -136,8 +148,10 @@ const RTIListPage = () => {
 
       setApplications(data);
       setTotalRecords(total);
+      setToast({ message: "Record deleted successfully.", type: "success" });
     } catch (err) {
       setError("Unable to delete the application. Please try again.");
+      setToast({ message: "Unable to delete the application.", type: "error" });
     } finally {
       setIsLoading(false);
     }
@@ -174,8 +188,10 @@ const RTIListPage = () => {
       setTotalRecords(total);
       setConfirmOpen(false);
       setSelectedDeleteId(null);
+      setToast({ message: "Record deleted successfully.", type: "success" });
     } catch (err) {
       setError("Unable to delete the application. Please try again.");
+      setToast({ message: "Unable to delete the application.", type: "error" });
     } finally {
       setConfirmProcessing(false);
     }
@@ -190,8 +206,24 @@ const RTIListPage = () => {
 
   const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
 
+  // Auto-dismiss toast after 3 seconds
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   return (
     <div className="space-y-6">
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed right-6 top-6 z-50 max-w-sm shadow-lg rounded-lg overflow-hidden ${toast.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+          <div className="px-4 py-3">
+            <p className="text-sm">{toast.message}</p>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col xl:flex-row xl:items-center xl:justify-end">
         <Link
           to="/rti/create"
@@ -323,7 +355,7 @@ const RTIListPage = () => {
                       </td>
 
                       <td className="px-6 py-5 text-sm text-gray-700">
-                        {item.date}
+                        {formatDate(item.date)}
                       </td>
 
                       <td className="px-6 py-5">

@@ -81,7 +81,9 @@ export async function createRTIApplication(data) {
     const response = await apiClient.post("/rti", sanitizePayload(data));
     return response.data;
   } catch (error) {
-    throw new Error(getErrorMessage(error));
+    const e = new Error(getErrorMessage(error));
+    e.server = error?.response?.data;
+    throw e;
   }
 }
 
@@ -90,7 +92,9 @@ export async function updateRTIApplication(id, data) {
     const response = await apiClient.put(`/rti/${id}`, sanitizePayload(data));
     return response.data;
   } catch (error) {
-    throw new Error(getErrorMessage(error));
+    const e = new Error(getErrorMessage(error));
+    e.server = error?.response?.data;
+    throw e;
   }
 }
 
@@ -99,6 +103,8 @@ export async function deleteRTIApplication(id) {
     const response = await apiClient.delete(`/rti/${id}`);
     return response.data;
   } catch (error) {
-    throw new Error(getErrorMessage(error));
+    const e = new Error(getErrorMessage(error));
+    e.server = error?.response?.data;
+    throw e;
   }
 }

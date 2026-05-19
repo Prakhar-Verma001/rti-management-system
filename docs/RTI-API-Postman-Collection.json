@@ -1,0 +1,95 @@
+{
+  "info": {
+    "name": "RTI Management API",
+    "_postman_id": "b6b9b2b4-1b2a-4f5d-9c2e-01d2a8f9e6ef",
+    "description": "Postman collection for RTI Management System backend API (import into Postman v8+). Base URL is provided via environment variable `base_url` (e.g., http://localhost:4000).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get RTI list",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/rti?page=1&pageSize=10",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "rti"
+          ],
+          "query": [
+            { "key": "page", "value": "1" },
+            { "key": "pageSize", "value": "10" },
+            { "key": "search", "value": "" },
+            { "key": "startDate", "value": "" },
+            { "key": "endDate", "value": "" },
+            { "key": "status", "value": "" },
+            { "key": "department", "value": "" }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get RTI by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/rti/{{rti_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api","rti","{{rti_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Create RTI (Submit)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"applicantName\": \"John Doe\",\n  \"gender\": \"Male\",\n  \"contactNumber\": \"1234567890\",\n  \"email\": \"john@example.com\",\n  \"address\": \"123 Main St\",\n  \"subject\": \"Request for records\",\n  \"applicationMode\": \"Online\",\n  \"dateOfReceipt\": \"2026-05-19\",\n  \"description\": \"Please provide the requested documents.\",\n  \"department\": \"Finance Department\",\n  \"assignedOfficer\": \"Officer 1\",\n  \"dueDate\": \"2026-06-01\",\n  \"extendedDueDate\": \"\",\n  \"reminderFrequency\": \"Monthly\",\n  \"status\": \"Pending\",\n  \"uploadApplication\": \"\",\n  \"additionalAttachments\": [],\n  \"rtiNo\": \"\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/rti", "host": ["{{base_url}}"], "path": ["api","rti"] }
+      }
+    },
+    {
+      "name": "Create RTI (Save Draft)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"applicantName\": \"Draft User\",\n  \"contactNumber\": \"\",\n  \"subject\": \"\",\n  \"applicationMode\": \"\",\n  \"dateOfReceipt\": \"\",\n  \"department\": \"\",\n  \"dueDate\": \"\",\n  \"reminderFrequency\": \"\",\n  \"status\": \"Draft\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/rti", "host": ["{{base_url}}"], "path": ["api","rti"] }
+      }
+    },
+    {
+      "name": "Update RTI",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"applicantName\": \"John Doe Updated\",\n  \"contactNumber\": \"1234567890\",\n  \"subject\": \"Updated subject\",\n  \"status\": \"Pending\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/rti/{{rti_id}}", "host": ["{{base_url}}"], "path": ["api","rti","{{rti_id}}"] }
+      }
+    },
+    {
+      "name": "Delete RTI",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": { "raw": "{{base_url}}/api/rti/{{rti_id}}", "host": ["{{base_url}}"], "path": ["api","rti","{{rti_id}}"] }
+      }
+    }
+  ]
+}

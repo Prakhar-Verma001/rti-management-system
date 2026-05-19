@@ -16,33 +16,54 @@ export const validateIdParam = [
 ];
 
 export const validateRTIApplication = [
-  body("applicantName").trim().notEmpty().withMessage("Applicant Name is required"),
+  // Only enforce required/strict validators when status is not Draft
+  body().custom((_, { req }) => {
+    const s = req.body.status;
+    const isDraft = s && typeof s === "string" && s.toLowerCase() === "draft";
+    // Attach a flag to request for reuse in individual validators if needed
+    req._isDraft = !!isDraft;
+    return true;
+  }),
+  body("applicantName")
+    .if((_, { req }) => !req._isDraft)
+    .trim()
+    .notEmpty()
+    .withMessage("Applicant Name is required"),
   body("contactNumber")
+    .if((_, { req }) => !req._isDraft)
     .trim()
     .notEmpty()
     .withMessage("Contact Number is required")
     .matches(/^[0-9]{10}$/)
     .withMessage("Contact Number must be 10 digits"),
-  body("subject").trim().notEmpty().withMessage("Subject is required"),
+  body("subject")
+    .if((_, { req }) => !req._isDraft)
+    .trim()
+    .notEmpty()
+    .withMessage("Subject is required"),
   body("applicationMode")
+    .if((_, { req }) => !req._isDraft)
     .trim()
     .notEmpty()
     .withMessage("Application Mode is required")
     .isIn(validApplicationModes)
     .withMessage("Application Mode must be Online or Offline"),
   body("dateOfReceipt")
+    .if((_, { req }) => !req._isDraft)
     .trim()
     .notEmpty()
     .withMessage("Date of Receipt is required")
     .isISO8601()
     .withMessage("Date of Receipt must be a valid date"),
   body("department")
+    .if((_, { req }) => !req._isDraft)
     .trim()
     .notEmpty()
     .withMessage("Department is required")
     .isIn(validDepartments)
     .withMessage("Department is invalid"),
   body("dueDate")
+    .if((_, { req }) => !req._isDraft)
     .trim()
     .notEmpty()
     .withMessage("Due Date is required")
@@ -65,6 +86,7 @@ export const validateRTIApplication = [
       return true;
     }),
   body("reminderFrequency")
+    .if((_, { req }) => !req._isDraft)
     .trim()
     .notEmpty()
     .withMessage("Reminder Frequency is required")

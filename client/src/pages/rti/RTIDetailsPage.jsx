@@ -85,6 +85,16 @@ const RTIDetailsPage = () => {
 
   const handleBack = () => navigate(-1)
 
+  const displayField = (val) => {
+    if (val === null || val === undefined || val === "") return "N/A"
+    if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") return val
+    if (Array.isArray(val)) return val.length ? val.join(", ") : "N/A"
+    if (typeof val === "object") {
+      return val.departmentName || val.name || val.assignedOfficer || val.id || val._id || "N/A"
+    }
+    return String(val)
+  }
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 md:p-8 text-center text-gray-500">
@@ -152,8 +162,8 @@ const RTIDetailsPage = () => {
           <h2 className={sectionTitleClassName}>Department Details</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <DetailItem label="Department" value={application.department || "N/A"} />
-            <DetailItem label="Assigned Officer" value={application.assignedOfficer || "N/A"} />
+            <DetailItem label="Department" value={displayField(application.department)} />
+            <DetailItem label="Assigned Officer" value={displayField(application.assignedOfficer)} />
           </div>
         </div>
 

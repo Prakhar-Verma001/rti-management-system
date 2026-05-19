@@ -9,18 +9,16 @@ const rtiDetailSchema = new mongoose.Schema(
     },
     subject: {
       type: String,
-      required: true,
       trim: true,
     },
     applicationMode: {
       type: String,
       enum: ["Online", "Offline"],
-      required: true,
       trim: true,
     },
     dateOfReceipt: {
       type: Date,
-      required: true,
+      default: null,
     },
     description: {
       type: String,
@@ -29,7 +27,7 @@ const rtiDetailSchema = new mongoose.Schema(
     },
     dueDate: {
       type: Date,
-      required: true,
+      default: null,
     },
     extendedDueDate: {
       type: Date,
@@ -38,7 +36,6 @@ const rtiDetailSchema = new mongoose.Schema(
     reminderFrequency: {
       type: String,
       enum: ["Daily", "Weekly", "Monthly"],
-      required: true,
       trim: true,
     },
     status: {
@@ -59,7 +56,6 @@ const rtiDetailSchema = new mongoose.Schema(
     department: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "DepartmentDetail",
-      required: true,
     },
   },
   {
